@@ -15,30 +15,6 @@
         date_sma_pairs
     }
 
-    // pub fn simple_moving_averages(stock_data : Vec<Bar>, days : i16) -> HashMap<i64, f64> {
-    //     let mut position : i16 = 1;
-    //     let mut closed_sum : f64 = 0.0;
-    //
-    //     let mut date_sma_pairs = HashMap::new();
-    //
-    //     for (index, record) in stock_data.iter().enumerate() {
-    //         closed_sum += record.close;
-    //         position = position + 1;
-    //
-    //         if position > days   {
-    //             //date_value_pair.push(DateValuePair {date : record.timestamp, value: closed_sum/days as f64});
-    //             date_sma_pairs.insert(record.timestamp, closed_sum/days as f64);
-    //
-    //             let address = index as i16 - days + 1;
-    //             // println!("address ${:.1} .", address);
-    //             // println!("index jako i8 ${:.1} .", index as i8);
-    //             // println!("index ${:.1} .", index );
-    //             closed_sum = closed_sum - stock_data[address as usize].close;
-    //         }
-    //     }
-    //     date_sma_pairs
-    // }
-
     pub fn exponential_moving_average(stock_data : &Vec<Quote>, days : i16) -> HashMap<&u64, f64> {
         let mut date_ema_pair = HashMap::new();
 
@@ -127,41 +103,6 @@
         }
         direct_volume_map
     }
-
-
-    //
-    // pub fn encode_and_combine_values(macd : &HashMap<i64, f64>,ema : &HashMap<i64, f64>, sma : &HashMap<i64, f64>, direct_close: &HashMap<i64, i8> ,direct_volume: &HashMap<i64, i8> ) -> IndicatorCombination {
-    //     let macd_enc = encode_growth(macd);
-    //     let ema_enc = encode_growth(ema);
-    //     let sma_enc = encode_growth(sma);
-    //
-    //     let mut dates_vec = Vec::new();
-    //     let mut sma_vec = Vec::new();
-    //     let mut ema_vec = Vec::new();
-    //     let mut volume_vec = Vec::new();
-    //     let mut direction_vec = Vec::new();
-    //     let mut macd_vec = Vec::new();
-    //     for record in direct_volume {
-    //         if ema_enc.contains_key(record.0) && sma_enc.contains_key(record.0) && macd_enc.contains_key(record.0) {
-    //             dates_vec.push(record.0);
-    //             sma_vec.push(sma.get(record.0));
-    //             ema_vec.push(ema.get(record.0));
-    //             macd_vec.push(macd.get(record.0));
-    //             volume_vec.push(record.1);
-    //             direction_vec.push(direct_close.get(record.0));
-    //         }
-    //     }
-    //
-    //     IndicatorCombination {
-    //         dates: dates_vec,
-    //         sma: sma_vec,
-    //         ema: ema_vec,
-    //         volume: volume_vec,
-    //         direction: direction_vec,
-    //         macd : macd_vec
-    //     }
-    //
-    // }
 
     pub fn combine_values(macd : HashMap<&u64, f64>,ema : HashMap<&u64, f64>, sma : HashMap<&u64, f64>, direct_close: HashMap<&u64, i8> , data : &Vec<Quote> ) -> SignalsCombination {
 
@@ -272,20 +213,6 @@
         }
        sum / attribute_data.len() as f64 //zwrocenie wariancji
     }
-
-
-    // pub fn encode_growth(date_indicator_map: &HashMap<i64, f64>) -> HashMap<&i64, i8, RandomState> {
-    //     let mut date_trend_map = HashMap::new();
-    //     let mut last_value: f64 = 0.;
-    //     for record in date_indicator_map.iter() {//nie moze byc po wartosciach poniewaz sa one zwracane w kolejnosci losowej
-    //         if record.1 > &last_value {
-    //             date_trend_map.insert(record.0, 1);
-    //         } else {
-    //             date_trend_map.insert(record.0, 0);
-    //         }
-    //     }
-    //     date_trend_map
-    // }
 
    pub fn split_data(combined_signals : SignalsCombination, ratio : f64 )  -> SplitedComposition {
     let data_length = combined_signals.dates.iter().count();
