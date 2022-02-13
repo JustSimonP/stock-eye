@@ -34,7 +34,6 @@ fn main() {
                     print!("Value {}", item.close);
                 }
                 let mut sma = average::simple_moving_average(&stock_data,days);
-                 println!("CHUJE {:?}", sma);
                  let converted_sma = convert_date(sma);
                 Response::json(&converted_sma).with_additional_header("Access-Control-Allow-Origin","*")
             },
