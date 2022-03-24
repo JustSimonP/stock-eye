@@ -25,8 +25,8 @@ struct StockData {
      value: f64,
 }
 fn main() {
-     rouille::start_server("localhost:3000", move |request| {
-         router!(request,
+    rouille::start_server("localhost:3000", move |request| {
+        router!(request,
             (GET) (/stocklist) => {
                 let stock_companies = read_csv_data().unwrap();
                 Response::json(&stock_companies).with_additional_header("Access-Control-Allow-Origin","*")
@@ -40,7 +40,6 @@ fn main() {
                 for item in quote.iter()
                 {
                     stock_data.push(item.clone());
-                    print!("Value {}", item.close);
                 }
                 let mut sma = average::simple_moving_average(&stock_data, days);
                 let converted_sma = convert_date(sma, &stock_data);
@@ -86,32 +85,40 @@ fn main() {
                 Response::json(&rsi)
             },
              (POST) (/comment/{symbol : String}/{method : String}) => {
-                //let body = try_or_400!(rouille::input::plain_text_body(&request));
-                 let comment : Comment = rouille::input::json::json_input(request);
+                #[derive(Deserialize, Serialize)]
+                struct Comment {
+                    date : String,
+                    body : String,
+                    method : String,
+                    symbol : String
+                }
+                let comment : Comment = try_or_400!(rouille::input::json::json_input(request));
                 let db = database::getDatabase();
                 let collection = db.collection::<Comment>("stocks");
-                 collection.insert_one(comment, None);
-                 Response::text("ALL OK")
+                let dbResult = collection.insert_one(comment, None);
+                Response::text("ALL OK").with_additional_header("Access-Control-Allow-Origin","*")
              },
+            (GET) (/comment/{symbol : String}) => {
+                #[derive(Deserialize, Serialize)]
+                struct Comment {
+                    date : String,
+                    body : String,
+                    method : String,
+                    symbol : String
+                }
+                let db = database::getDatabase();
+                let filter = doc! {"symbol" : symbol};
+               let result : Collection<Comment> =  db.collection("stocks");
+                let cursor = result.find(filter, None).unwrap();
+                let mut documents : Vec<Comment> = Vec::new();
+                for doc in cursor {
+                   documents.push(doc.unwrap());
+                }
+                Response::json(&documents)
+            },
             _ => Response::empty_404()
         )
-     });
-
-    // let mut value_high : Vec<f64> = Vec::new();
-    // // print out some high numbers!
-    let provider = yahoo::YahooConnector::new();
-    let resp = provider.get_latest_quotes("AAPL", "1m").unwrap();
-    let quote = resp.quotes().unwrap();
-    let mut stock_data = Vec::new();
-    for item in quote.iter()
-    {
-                   stock_data.push(item.clone());
-    }
-    let mut dupa = average::naive_bayes(stock_data, 8, 0.75);
-    for record in dupa.iter(){
-        println!("Value and the predicton {:.2} on {}.", record.0, record.1);
-
-    }
+    });
 }
 
 pub fn read_csv_data() -> Result<Vec<StockCompany>, Box<dyn Error>> {
@@ -140,12 +147,6 @@ pub fn convert_date(mut indicator: HashMap<&u64, f64>, data : &Vec<Quote> ) -> V
                 close: ceil(data_record.close,2)});
         }
     }
-    // for record in indicator {
-    //     let time: DateTime<Utc> =
-    //         DateTime::from(UNIX_EPOCH + Duration::from_secs(record.0.clone()));
-    //
-    //     company_indicator.push(StockIndicator { date: time.format("%Y-%m-%d").to_string(), value: ceil( record.1.clone(),2) });
-    // };
     company_indicator.sort_by(|a, b| a.date.cmp(&b.date));
     company_indicator
 }
@@ -164,10 +165,10 @@ pub struct StockIndicator {
     close : f64
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Comment {
-    date : String,
-    body : String,
-    method : String,
-    company : String
-}
+// #[derive(Debug, Deserialize, Serialize)]
+// pub struct Comment {
+//     date : String,
+//     body : String,
+//     method : String,
+//     symbol : String
+// }
