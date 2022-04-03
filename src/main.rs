@@ -82,7 +82,26 @@ fn main() {
                 }
                 let mut rsi = average::rsi(&stock_data, 8);
                  //let converted_rsi = convert_date(rsi);
-                Response::json(&rsi)
+                Response::json(&rsi).with_additional_header("Access-Control-Allow-Origin","*")
+            },
+            (GET) (/bayes/{symbol : String}/{period : String}/{ratio : f64}/{days : i16}) => {
+                let provider = yahoo::YahooConnector::new();
+                let resp =  provider.get_quote_range(symbol.as_str(),"1d",period.as_str()).unwrap();
+                let quote = resp.quotes().unwrap();
+                let mut stock_data = Vec::new();
+                for item in quote.iter()
+                {
+                    stock_data.push(item.clone());
+                }
+                let mut bayes = average::naive_bayes(stock_data, days, ratio);
+                let mut bayesResults = Vec::new();
+                for record in bayes.iter() {
+                    bayesResults.push(BayesResult {
+                        recorded : record.0 as i16,
+                        predicted : record.1 as i16
+                    });
+                }
+                Response::json(&bayesResults).with_additional_header("Access-Control-Allow-Origin","*")
             },
              (POST) (/comment/{symbol : String}/{method : String}) => {
                 #[derive(Deserialize, Serialize)]
@@ -108,7 +127,7 @@ fn main() {
                 }
                 let db = database::getDatabase();
                 let filter = doc! {"symbol" : symbol};
-               let result : Collection<Comment> =  db.collection("stocks");
+                let result : Collection<Comment> =  db.collection("stocks");
                 let cursor = result.find(filter, None).unwrap();
                 let mut documents : Vec<Comment> = Vec::new();
                 for doc in cursor {
@@ -163,6 +182,12 @@ pub struct StockIndicator {
     date: String,
     value : f64,
     close : f64
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct BayesResult {
+    recorded : i16,
+    predicted : i16
 }
 
 // #[derive(Debug, Deserialize, Serialize)]
