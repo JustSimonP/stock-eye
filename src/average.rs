@@ -8,7 +8,7 @@
             closed_sum += record.close;
             if index >= days as usize {
                 let address = index as i16 - days;
-                closed_sum = closed_sum - stock_data[address as usize].close;
+                closed_sum -= stock_data[address as usize].close;
             }
             date_sma_pairs.insert(&record.timestamp, closed_sum/days as f64);
        }
@@ -112,6 +112,7 @@
         let mut volume_vec = Vec::new();
         let mut direction_vec = Vec::new();
         let mut macd_vec = Vec::new();
+        let volume_map = normalize_volume(data);
         for record in data {
             let date_in_float = record.timestamp;
             if ema.contains_key(&date_in_float) && sma.contains_key(&date_in_float) && macd.contains_key(&date_in_float) && direct_close.contains_key(&date_in_float){
@@ -119,7 +120,7 @@
                 sma_vec.push(*sma.get(&date_in_float).unwrap());
                 ema_vec.push(*ema.get(&date_in_float).unwrap());
                 macd_vec.push(*macd.get(&date_in_float).unwrap());
-                volume_vec.push(record.volume as f64);
+                volume_vec.push(*volume_map.get(&date_in_float).unwrap());
                 direction_vec.push(*direct_close.get(&date_in_float).unwrap() as f64);
             }
         }
@@ -131,6 +132,17 @@
             direction: direction_vec,
             macd : macd_vec
         }
+    }
+    pub fn normalize_volume(data : &Vec<Quote>) -> HashMap<&u64, f64> {
+        let mut normalized_volume = HashMap::new();
+        let volume_vec: Vec<u64> = data.iter.map(|x| x.volume).collect();
+        let min = volume_vec.iter().max().unwrap();
+        let max = volume_vec.iter().min().unwrap();
+        for record in data {
+            let normalized = (record.volume as f64 - *min as f64)  / (*max as f64 - *min as f64);
+            normalized_volume.insert(&record.timestamp, normalized);
+        }
+        normalized_volume
     }
 
     pub fn group_under_trend(train_data : &SignalsCombination) -> BinarySplit {
@@ -196,26 +208,29 @@
         // w przypadku obliczenia funkcji gęstości gaussa wykorzystujemy stałą Eulera i potęgujemy ją, za proces ten odpowiedzialna jest funkcja f64::exp
         //parametrami fu
         let exponent =  f64::exp(-(f64::powf(value - mean_std.0,2.))/ (2. * f64::powf(mean_std.1, 2.)));
+        println!("Exponent: {}", &exponent);
         let gauss: f64 = (1./ f64::sqrt(2. * PI) * mean_std.1) * exponent;
         gauss
     }
 
     fn get_mean_and_std(attribute: &Vec<f64>) -> (f64,f64) {
         let mean = mean(attribute);
+        println!("MEAN: {}", &mean);
         let std = standard_deviation(variance(attribute, &mean));
+        println!("STANDARD DEVIATION: {}", &std);
         (mean, std)
     }
 
     pub fn variance(attribute_data : &Vec<f64>, mean : &f64) -> f64 {
         let mut sum = 0.;
         for record in attribute_data {
-           sum = sum + f64::powf(record - mean,2.);
+           sum = sum + (record - mean).powi(2);
         }
        sum / attribute_data.len() as f64 //zwrocenie wariancji
     }
 
    pub fn split_data(combined_signals : SignalsCombination, ratio : f64 )  -> SplitedComposition {
-    let data_length = combined_signals.dates.iter().count();
+    let data_length = combined_signals.dates.len();
     let mut train_length = data_length as f64 *  ratio;
     train_length = train_length.ceil();
        let train_length = train_length as usize;
@@ -291,7 +306,7 @@
         let sma_gauss = gaussian_probability(sma_data, record.sma[index]);
         let ema_gauss = gaussian_probability(ema_data, record.ema[index]);
         let probability = macd_gauss * volume_gauss * sma_gauss * ema_gauss;
-
+        println!("MACD: {}, Volume: {}, sma: {}, ema: {}", &macd_gauss, &volume_gauss, &sma_gauss, &ema_gauss);
         probability
     }
 

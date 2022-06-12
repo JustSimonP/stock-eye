@@ -4,7 +4,7 @@ use mongodb::{
 };
 use mongodb::sync::{Database, Collection};
 
-    pub fn getDatabase()-> Database {
+    pub fn get_database() -> Database {
         let client : Client = Client::with_uri_str("mongodb://localhost:27017").unwrap();
         client.database("stocks")
     }

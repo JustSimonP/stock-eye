@@ -96,12 +96,12 @@ fn main() {
                 let mut bayes = average::naive_bayes(stock_data, days, ratio);
                 let mut bayesResults = Vec::new();
                 for record in bayes.iter() {
-                    bayesResults.push(BayesResult {
-                        recorded : record.0 as i16,
-                        predicted : record.1 as i16
+                    bayes_results.push(BayesResult {
+                        recorded : record.0_i16,
+                        predicted : record.1_i16
                     });
                 }
-                Response::json(&bayesResults).with_additional_header("Access-Control-Allow-Origin","*")
+                Response::json(&bayes_results).with_additional_header("Access-Control-Allow-Origin","*")
             },
              (POST) (/comment/{symbol : String}/{method : String}) => {
                 #[derive(Deserialize, Serialize)]
@@ -112,9 +112,9 @@ fn main() {
                     symbol : String
                 }
                 let comment : Comment = try_or_400!(rouille::input::json::json_input(request));
-                let db = database::getDatabase();
+                let db = database::get_database();
                 let collection = db.collection::<Comment>("stocks");
-                let dbResult = collection.insert_one(comment, None);
+                let db_result = collection.insert_one(comment, None);
                 Response::text("ALL OK").with_additional_header("Access-Control-Allow-Origin","*")
              },
             (GET) (/comment/{symbol : String}) => {
@@ -125,7 +125,7 @@ fn main() {
                     method : String,
                     symbol : String
                 }
-                let db = database::getDatabase();
+                let db = database::get_database();
                 let filter = doc! {"symbol" : symbol};
                 let result : Collection<Comment> =  db.collection("stocks");
                 let cursor = result.find(filter, None).unwrap();
@@ -142,13 +142,13 @@ fn main() {
 
 pub fn read_csv_data() -> Result<Vec<StockCompany>, Box<dyn Error>> {
     let mut stock_comapnies: Vec<StockCompany> = Vec::new();
-    let mut reader = csv::Reader::from_path("src/stockCompanies.csv");
+    let reader = csv::Reader::from_path("src/stockCompanies.csv");
     let mut reader = match reader {
         Ok(reader) => reader,
         Err(error) => panic!("Problem opening the file: {:?}", error)
     };
     for result in reader.deserialize() {
-        let mut record: StockCompany = result?;
+        let record: StockCompany = result?;
         stock_comapnies.push(record);
     }
     Ok(stock_comapnies)
