@@ -1,6 +1,7 @@
     use std::collections::HashMap;
     use std::f64::consts::PI;
     use yahoo_finance_api::Quote;
+
     pub fn simple_moving_average(stock_data : &Vec<Quote>, days : i16) -> HashMap<&u64, f64> {
         let mut closed_sum : f64 = 0.;
         let mut date_sma_pairs = HashMap::new();
@@ -70,8 +71,9 @@
         let mut macd_pairs: HashMap<&u64, f64> = HashMap::new();
         for record in ema12.iter(){
            if ema26.contains_key(record.0) {
-                macd_pairs.insert(record.0,record.1 - ema26.get(record.0).unwrap());
+                macd_pairs.insert(record.0,(record.1 - ema26.get(record.0).unwrap()).abs());
            }
+            print!("MACDOCIE: {} ", (record.1 - ema26.get(record.0).unwrap()).abs());
         }
         macd_pairs
     }
@@ -124,6 +126,11 @@
                 direction_vec.push(*direct_close.get(&date_in_float).unwrap() as f64);
             }
         }
+        println!("SMA values: {:?}", sma_vec);
+        println!("EMA values: {:?}", ema_vec);
+        println!("MACD values: {:?}", macd_vec);
+        println!("Volume values: {:?}", volume_vec);
+        println!("Direction values: {:?}", direction_vec);
         SignalsCombination {
             dates: dates_vec,
             sma: sma_vec,
@@ -135,12 +142,12 @@
     }
     pub fn normalize_volume(data : &Vec<Quote>) -> HashMap<&u64, f64> {
         let mut normalized_volume = HashMap::new();
-        let volume_vec: Vec<u64> = data.iter.map(|x| x.volume).collect();
-        let min = volume_vec.iter().max().unwrap();
-        let max = volume_vec.iter().min().unwrap();
+        //let volume_vec: Vec<u64> = data.into_iter().map(|x| x.volume).collect();
+        // let min = volume_vec.iter().max().unwrap();
+        // let max = volume_vec.iter().min().unwrap();
         for record in data {
-            let normalized = (record.volume as f64 - *min as f64)  / (*max as f64 - *min as f64);
-            normalized_volume.insert(&record.timestamp, normalized);
+            //let normalized = (record.volume as f64 - *min as f64)  / (*max as f64 - *min as f64);
+            normalized_volume.insert(&record.timestamp, (record.volume / 1000) as f64);
         }
         normalized_volume
     }
@@ -165,13 +172,14 @@
             }
         };
 
-        for (index, record) in   train_data.direction.iter().enumerate() {
+        for (index, record) in  train_data.direction.iter().enumerate() {
             if *record  == 1. as f64 {
                 splitted_data.positive.sma.push(train_data.sma[index]);
                 splitted_data.positive.ema.push(train_data.ema[index]);
                 splitted_data.positive.macd.push(train_data.macd[index]);
                 splitted_data.positive.volume.push(train_data.volume[index]);
                 splitted_data.positive.dates.push(train_data.dates[index]);
+                println!("Its positive");
 
             } else {
                 splitted_data.negative.sma.push(train_data.sma[index]);
@@ -179,6 +187,8 @@
                 splitted_data.negative.macd.push(train_data.macd[index]);
                 splitted_data.negative.volume.push(train_data.volume[index]);
                 splitted_data.negative.dates.push(train_data.dates[index]);
+                println!("Its negative");
+
             }
         }
         splitted_data
@@ -200,16 +210,20 @@
             macd_pair: get_mean_and_std(&splitted_data.negative.macd),
             volume_pair: get_mean_and_std(&splitted_data.negative.volume)
         };
-
+        println!("Positive ema pair {:?}", positive.ema_pair);
+        println!("Positive sma pair {:?}", positive.sma_pair);
+        println!("Positive macd pair {:?}", positive.macd_pair);
         (positive, negative)
     }
 
     pub fn gaussian_probability(mean_std: (f64, f64), value : f64) -> f64 {
         // w przypadku obliczenia funkcji gęstości gaussa wykorzystujemy stałą Eulera i potęgujemy ją, za proces ten odpowiedzialna jest funkcja f64::exp
         //parametrami fu
-        let exponent =  f64::exp(-(f64::powf(value - mean_std.0,2.))/ (2. * f64::powf(mean_std.1, 2.)));
+        println!("Mean and std: {:?}", mean_std);
+        let exponent =  f64::exp(-((f64::powi(value - mean_std.0,2))/ (2. * f64::powi(mean_std.1, 2))));
         println!("Exponent: {}", &exponent);
-        let gauss: f64 = (1./ f64::sqrt(2. * PI) * mean_std.1) * exponent;
+        println!("Czesc Gaussa: {}", (1./ (f64::sqrt(2. * PI) * mean_std.1)));
+        let gauss: f64 = (1./ (f64::sqrt(2. * PI) * mean_std.1)) * exponent;
         gauss
     }
 
@@ -240,7 +254,7 @@
       let splitted_macd = combined_signals.macd.split_at(train_length);
       let splitted_volume = combined_signals.volume.split_at(train_length);
       let splitted_direction = combined_signals.direction.split_at(train_length);
-
+        println!("Splitted volume: {:?}", splitted_volume);
        SplitedComposition {
            training: SignalsCombination {
                dates: splitted_dates.0.to_vec(),
@@ -267,10 +281,12 @@
         let macd = macd(&data);
         //let volume = determine_volume_growth(&data);
         let close = determine_trend(&data);
+
         let mut combination = combine_values(macd,ema, sma,close , &data);
         let mut splitted_data = split_data(combination, ratio);
         let mut trained_divided = group_under_trend(&splitted_data.training);
-        let mut pairs = mean_and_std(&trained_divided);
+        //pairs stores 2 objects for both negative and positive values divided into indicator data
+        let mut pairs = mean_and_std(&trained_divided); // 0 from pair is positive, 1 is negative
         let predictions = splitted_data.testing.volume.len() as i64;
 
         let positives_count =  trained_divided.positive.volume.len() as f64;
@@ -280,10 +296,12 @@
         let mut test_with_pred : Vec<(f64, i64)> = Vec::new();
         for index in 0.. predictions - 1 {
             //dane z wynikiem pozytywnym
-            let positive_data = count_gauss_probability(&mut splitted_data, index as usize, &pairs.0);
+            let positive_data = count_gauss_probability(&mut splitted_data.testing, index as usize, &pairs.0);
+            println!("Positive data probability: {}", positive_data);
 
             //dane z wynikiem negatywnym
-            let negative_data = count_gauss_probability(&mut splitted_data, index as usize, &pairs.1);
+            let negative_data = count_gauss_probability(&mut splitted_data.testing, index as usize, &pairs.1);
+            println!("Negative data probability: {}", positive_data);
 
             if (positives_ratio * positive_data) > (negatives_ratio * negative_data) {
                 test_with_pred.push( (splitted_data.testing.direction[index as usize], 1));
@@ -295,13 +313,22 @@
         test_with_pred
     }
 
-    fn count_gauss_probability(splitted_data: &mut SplitedComposition, index: usize, data: &MeanStdPairs) -> f64 {
+    fn count_gauss_probability(testing: &mut SignalsCombination, index: usize, data: &MeanStdPairs) -> f64 {
         let macd_data = data.macd_pair;
+        println!("MACD: {:?}", macd_data);
         let volume_data = data.volume_pair;
+        println!("Volume: {:?}", volume_data);
+
         let sma_data = data.sma_pair;
+        println!("SMA: {:?}", sma_data);
+
         let ema_data = data.ema_pair;
-        let record = &splitted_data.testing;
+        println!("EMA: {:?}", ema_data);
+
+        let record = testing;
+
         let macd_gauss = gaussian_probability(macd_data, record.macd[index]);
+        println!("Jestem przed liczeniem volume");
         let volume_gauss = gaussian_probability(volume_data, record.volume[index]);
         let sma_gauss = gaussian_probability(sma_data, record.sma[index]);
         let ema_gauss = gaussian_probability(ema_data, record.ema[index]);

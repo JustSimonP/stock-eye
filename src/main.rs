@@ -94,11 +94,11 @@ fn main() {
                     stock_data.push(item.clone());
                 }
                 let mut bayes = average::naive_bayes(stock_data, days, ratio);
-                let mut bayesResults = Vec::new();
+                let mut bayes_results = Vec::new();
                 for record in bayes.iter() {
                     bayes_results.push(BayesResult {
-                        recorded : record.0_i16,
-                        predicted : record.1_i16
+                        recorded : record.0 as i16,
+                        predicted : record.1 as i16
                     });
                 }
                 Response::json(&bayes_results).with_additional_header("Access-Control-Allow-Origin","*")
