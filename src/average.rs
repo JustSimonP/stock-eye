@@ -33,7 +33,7 @@
         stock_data.iter().sum::<f64>() / stock_data.len() as f64
     }
 
-    pub fn rsi(stock_data : &Vec<Quote>, period : i16) -> HashMap<u64, f64> {
+    pub fn rsi(stock_data : &Vec<Quote>, period : i16) -> HashMap<&u64, f64> {
         //date_value_pair.push(DateClosePair {date: stock_data[0].timestamp, average_close : stock_data[0].close} );
         let mut count_to_period = 0;
         let mut gain_counter = 0;
@@ -43,7 +43,7 @@
         let mut rsi_points = HashMap::new();
         let mut previous_pos_average = 0.;
         let mut previous_neg_average = 0.;
-        let first: Boolean = false;
+        let mut first = false;
         for (index, record) in stock_data.iter().skip(1).enumerate() {
             let previous_prize = stock_data[index].close;
             let value_change = record.close - previous_prize;
@@ -59,16 +59,22 @@
                 count_to_period += 1;
             } else {
                 if first {
-                    previous_pos_average = (previous_pos_average * (period - 1) + value_change.abs()) / period;
-                    previous_neg_average = (previous_neg_average * (period - 1) + value_change.abs()) / period;
+                    if value_change < 0. {
+                        previous_pos_average = (previous_pos_average * (period - 1) as f64 + 0) / period as f64;
+                        previous_neg_average = (previous_neg_average * (period - 1) as f64 + value_change.abs()) / period as f64;
+                    } else {
+                        previous_pos_average = (previous_pos_average * (period - 1) as f64 + value_change.abs()) / period as f64;
+                        previous_neg_average = (previous_neg_average * (period - 1) as f64 + 0) / period as f64;
+                    }
                 } else {
                     previous_pos_average = (sum_of_gain / gain_counter as f64) / period as f64;
                     previous_neg_average = (sum_of_lose.abs() / lose_counter as f64) / period as f64;
                     first = true;
                 }
-                let relative_strength = previous_pos_average / previous_pos_average;
+                let relative_strength = previous_pos_average / previous_neg_average;
+                println!("Strength: {} ", relative_strength);
                 let rsi_point = 100. - (100. / (1. + relative_strength));
-                rsi_points.insert(record.timestamp, rsi_point);
+                rsi_points.insert(&record.timestamp, rsi_point);
             }
         }
         rsi_points

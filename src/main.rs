@@ -72,7 +72,7 @@ fn main() {
                  let converted_macd = convert_date(macd, &stock_data);
                 Response::json(&converted_macd).with_additional_header("Access-Control-Allow-Origin","*")
             },
-             (GET) (/rsi/{symbol : String}/{period : String}) => {
+             (GET) (/rsi/{symbol : String}/{period : String}/{days : i16}) => {
                 let provider = yahoo::YahooConnector::new();
                 let resp =  provider.get_quote_range(symbol.as_str(),"1d",period.as_str()).unwrap();
                 let quote = resp.quotes().unwrap();
@@ -80,8 +80,9 @@ fn main() {
                 for item in quote.iter()
                 {
                     stock_data.push(item.clone());
+                    println!("Deiveiv: {}", item.close)
                 }
-                let mut rsi = average::rsi(&stock_data, 8);
+                let  rsi = average::rsi(&stock_data, days);
                  //let converted_rsi = convert_date(rsi);
                 Response::json(&rsi).with_additional_header("Access-Control-Allow-Origin","*")
             },
