@@ -41,27 +41,36 @@
         let mut sum_of_gain = 0.;
         let mut sum_of_lose = 0.;
         let mut rsi_points = HashMap::new();
+        let mut previous_pos_average = 0.;
+        let mut previous_neg_average = 0.;
+        let first: Boolean = false;
         for (index, record) in stock_data.iter().skip(1).enumerate() {
-            if count_to_period == period {
-                sum_of_lose = -sum_of_lose; // reverse the sign for further calculations
-                let mut gain_average = (sum_of_gain/gain_counter as f64) / period as f64;
-                let mut lose_average = (sum_of_lose/lose_counter as f64) / period as f64;
-                let relative_strength = 1. + (gain_average/lose_average);
-                let rsi_point = 100. - (100./ relative_strength);
-                rsi_points.insert(record.timestamp, rsi_point);
-            }
-                let previous_prize = stock_data[index].close;
-                let value_change =  ((record.close - previous_prize) / previous_prize) * 100.; //getting the percent of change between prices
+            let previous_prize = stock_data[index].close;
+            let value_change = record.close - previous_prize;
+            if count_to_period < period {
+                //getting the percent of change between prices
                 if value_change >= 0. {
                     gain_counter += 1;
                     sum_of_gain += value_change
-
-                } else if value_change< 0.{
+                } else if value_change < 0. {
                     lose_counter += 1;
                     sum_of_lose += value_change;
                 }
                 count_to_period += 1;
+            } else {
+                if first {
+                    previous_pos_average = (previous_pos_average * (period - 1) + value_change.abs()) / period;
+                    previous_neg_average = (previous_neg_average * (period - 1) + value_change.abs()) / period;
+                } else {
+                    previous_pos_average = (sum_of_gain / gain_counter as f64) / period as f64;
+                    previous_neg_average = (sum_of_lose.abs() / lose_counter as f64) / period as f64;
+                    first = true;
+                }
+                let relative_strength = previous_pos_average / previous_pos_average;
+                let rsi_point = 100. - (100. / (1. + relative_strength));
+                rsi_points.insert(record.timestamp, rsi_point);
             }
+        }
         rsi_points
     }
 
@@ -179,8 +188,6 @@
                 splitted_data.positive.macd.push(train_data.macd[index]);
                 splitted_data.positive.volume.push(train_data.volume[index]);
                 splitted_data.positive.dates.push(train_data.dates[index]);
-                println!("Its positive");
-
             } else {
                 splitted_data.negative.sma.push(train_data.sma[index]);
                 splitted_data.negative.ema.push(train_data.ema[index]);

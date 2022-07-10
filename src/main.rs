@@ -1,5 +1,6 @@
 mod average;
 mod database;
+mod fundamental;
 // retrieve 6 months worth of data
 
 use serde::{Serialize, Deserialize};
@@ -134,6 +135,10 @@ fn main() {
                    documents.push(doc.unwrap());
                 }
                 Response::json(&documents)
+            },
+            (GET)(/fund/) => {
+                fundamental::getCashFlow();
+                Response::text("All ok")
             },
             _ => Response::empty_404()
         )
