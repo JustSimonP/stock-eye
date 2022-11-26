@@ -60,11 +60,11 @@
             } else {
                 if first {
                     if value_change < 0. {
-                        previous_pos_average = (previous_pos_average * (period - 1) as f64 + 0) / period as f64;
+                        previous_pos_average = (previous_pos_average * (period - 1) as f64 + 0.) / period as f64;
                         previous_neg_average = (previous_neg_average * (period - 1) as f64 + value_change.abs()) / period as f64;
                     } else {
                         previous_pos_average = (previous_pos_average * (period - 1) as f64 + value_change.abs()) / period as f64;
-                        previous_neg_average = (previous_neg_average * (period - 1) as f64 + 0) / period as f64;
+                        previous_neg_average = (previous_neg_average * (period - 1) as f64 + 0.) / period as f64;
                     }
                 } else {
                     previous_pos_average = (sum_of_gain / gain_counter as f64) / period as f64;

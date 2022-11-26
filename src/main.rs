@@ -82,9 +82,10 @@ fn main() {
                     stock_data.push(item.clone());
                     println!("Deiveiv: {}", item.close)
                 }
-                let  rsi = average::rsi(&stock_data, days);
+                let mut rsi = average::rsi(&stock_data, days);
                  //let converted_rsi = convert_date(rsi);
-                Response::json(&rsi).with_additional_header("Access-Control-Allow-Origin","*")
+                let converted_date_rsi = convert_date(rsi, &stock_data);
+                Response::json(&converted_date_rsi).with_additional_header("Access-Control-Allow-Origin","*")
             },
             (GET) (/bayes/{symbol : String}/{period : String}/{ratio : f64}/{days : i16}) => {
                 let provider = yahoo::YahooConnector::new();
