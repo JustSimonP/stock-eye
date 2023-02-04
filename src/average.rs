@@ -7,11 +7,11 @@
         let mut date_sma_pairs = HashMap::new();
         for (index, record) in stock_data.iter().enumerate() {
             closed_sum += record.close;
-            if index >= days as usize {
-                let address = index as i16 - days;
+            if index >= (days-1) as usize {
+                date_sma_pairs.insert(&record.timestamp, closed_sum/days as f64);
+                let address = index as i16 - days + 1;
                 closed_sum -= stock_data[address as usize].close;
             }
-            date_sma_pairs.insert(&record.timestamp, closed_sum/days as f64);
        }
         date_sma_pairs
     }
@@ -20,8 +20,9 @@
         let mut date_ema_pair = HashMap::new();
 
         let alpha: f64 = 2. / (1. + days as f64);
-        let mut last_ema = 0.;
-        for record in stock_data.iter() {
+        let mut last_ema =  stock_data.iter().take(days as usize).map(|x| x.close).sum::<f64>() / days as f64;
+        date_ema_pair.insert(&stock_data[(days-1) as usize].timestamp, last_ema);
+        for record in stock_data.iter().skip(days as usize) {
             let ema : f64 =  (record.close * alpha) + (last_ema * (1. - alpha));
             date_ema_pair.insert(&record.timestamp, ema);
             last_ema = ema;
